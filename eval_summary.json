@@ -1,0 +1,25 @@
+{
+  "overall": {
+    "base_avg_rouge": 0.1971,
+    "ft_avg_rouge": 0.2321,
+    "improvement_pct": 17.8,
+    "win_rate_pct": 65.0,
+    "total_questions": 20
+  },
+  "by_category": {
+    "base": {
+      "Anatomy & Physiology": 0.1749,
+      "Pathophysiology": 0.1228,
+      "Pharmacology": 0.228,
+      "Symptoms & Diagnosis": 0.1868,
+      "Treatment": 0.2728
+    },
+    "finetuned": {
+      "Anatomy & Physiology": 0.2272,
+      "Pathophysiology": 0.1816,
+      "Pharmacology": 0.2764,
+      "Symptoms & Diagnosis": 0.1928,
+      "Treatment": 0.2823
+    }
+  }
+}
