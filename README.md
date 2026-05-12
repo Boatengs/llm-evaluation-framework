@@ -42,10 +42,10 @@ A research-grade evaluation framework comparing Base Mistral 7B vs LoRA Fine-tun
 
 ##  Links
 
-- Fine-tuned Model: https://huggingface.co/samboateng190/medical-mistral-lora
+- Fine-tuned Model: https://huggingface.co/samurvivor-07/medical-mistral-lora
 - Project 3 Medical QA LoRA: https://github.com/Boatengs/medical-qa-lora
 - Project 2 SPORTZBOT RAG: https://github.com/Boatengs/sports-rag-chatbot-
 - Project 1 Sentiment Analyzer: https://github.com/Boatengs/sentiment-analyzer
 
 ## 🌍 Live Demo
-- **HuggingFace Space:** https://huggingface.co/spaces/samboateng190/llm-evaluation-framework
+- **HuggingFace Space:** https://huggingface.co/spaces/samurvivor-07/llm-evaluation-framework
