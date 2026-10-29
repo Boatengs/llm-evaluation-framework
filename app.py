@@ -231,7 +231,7 @@ with gr.Blocks(css=css, title="🔬 LLM Evaluation Framework") as demo:
         Base Mistral 7B vs LoRA Fine-tuned • ROUGE-1, ROUGE-2, ROUGE-L Metrics •
         20 Medical QA Questions • 5 Clinical Domains •
         <a href="https://github.com/Boatengs/llm-evaluation-framework" target="_blank" style="color:var(--accent);">GitHub</a> •
-        <a href="https://huggingface.co/samboateng190/medical-mistral-lora" target="_blank" style="color:var(--accent);">Fine-tuned Model</a>
+        <a href="https://huggingface.co/samurvivor-07/medical-mistral-lora" target="_blank" style="color:var(--accent);">Fine-tuned Model</a>
     </div>
     """)
 
