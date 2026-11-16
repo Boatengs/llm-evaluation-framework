@@ -35,8 +35,16 @@ jobs:
         run: |
           tag=$(curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | python -c "import json,sys;print(json.load(sys.stdin)['tag_name'])")
           echo "TAG=$tag" >> $GITHUB_ENV; echo tag $tag
-          curl -sL -o bin.zip "https://github.com/ggml-org/llama.cpp/releases/download/$tag/llama-$tag-bin-ubuntu-x64.zip"
-          unzip -q bin.zip -d llama && find llama -name 'llama-server' -o -name 'llama-cli' | head
+          curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest > rel.json
+          python -c "import json;[print(a['name']) for a in json.load(open('rel.json'))['assets']]"
+          url=$(python -c "
+          import json
+          a=[x for x in json.load(open('rel.json'))['assets'] if 'ubuntu' in x['name'] and 'x64' in x['name'] and not any(k in x['name'] for k in ('vulkan','rocm','cuda','sycl','openvino','s390','arm'))]
+          print(a[0]['browser_download_url'])")
+          echo using $url
+          curl -sL -o bin.archive "$url"
+          mkdir llama; (unzip -q bin.archive -d llama || tar -xzf bin.archive -C llama)
+          find llama -name 'llama-server' | head
           git clone -q --depth 1 --branch $tag https://github.com/ggml-org/llama.cpp src
       - name: Convert LoRA adapter
         run: |
