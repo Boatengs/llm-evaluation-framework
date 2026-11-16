@@ -33,17 +33,19 @@ jobs:
           PY
       - name: llama.cpp release
         run: |
-          tag=$(curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | python -c "import json,sys;print(json.load(sys.stdin)['tag_name'])")
-          echo "TAG=$tag" >> $GITHUB_ENV; echo tag $tag
-          curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest > rel.json
-          python -c "import json;[print(a['name']) for a in json.load(open('rel.json'))['assets']]"
-          url=$(python -c "
+          curl -s "https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=40" > rels.json
+          python - <<'PY' > pick.txt
           import json
-          a=[x for x in json.load(open('rel.json'))['assets'] if 'ubuntu' in x['name'] and 'x64' in x['name'] and not any(k in x['name'] for k in ('vulkan','rocm','cuda','sycl','openvino','s390','arm'))]
-          print(a[0]['browser_download_url'])")
-          echo using $url
+          bad = ("vulkan", "rocm", "cuda", "sycl", "openvino", "s390", "arm", "aarch64", "hip")
+          for r in json.load(open("rels.json")):
+              for a in r["assets"]:
+                  n = a["name"]
+                  if "ubuntu" in n and "x64" in n and not any(k in n for k in bad):
+                      print(r["tag_name"], a["browser_download_url"]); raise SystemExit
+          PY
+          read tag url < pick.txt; echo "TAG=$tag" >> $GITHUB_ENV; echo "tag $tag url $url"
           curl -sL -o bin.archive "$url"
-          mkdir llama; (unzip -q bin.archive -d llama || tar -xzf bin.archive -C llama)
+          mkdir llama; (unzip -q bin.archive -d llama 2>/dev/null || tar -xzf bin.archive -C llama)
           find llama -name 'llama-server' | head
           git clone -q --depth 1 --branch $tag https://github.com/ggml-org/llama.cpp src
       - name: Convert LoRA adapter
