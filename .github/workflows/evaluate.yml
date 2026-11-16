@@ -1,0 +1,105 @@
+name: evaluate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [eval-v2]
+    paths: [".github/workflows/evaluate.yml"]
+
+permissions:
+  contents: write
+
+env:
+  LLAMA_TAG: b12445
+  GGUF_REPO: bartowski/Mistral-7B-Instruct-v0.3-GGUF
+  GGUF_FILE: Mistral-7B-Instruct-v0.3-Q8_0.gguf
+
+jobs:
+  adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Convert the LoRA adapter to GGUF
+        run: |
+          git clone -q --depth 1 https://github.com/ggml-org/llama.cpp llamacpp
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q -r llamacpp/requirements/requirements-convert_lora_to_gguf.txt
+          pip install -q -e llamacpp/gguf-py
+          python -c "from huggingface_hub import snapshot_download; snapshot_download('samurvivor-07/medical-mistral-lora', local_dir='adapter')"
+          python llamacpp/convert_lora_to_gguf.py adapter --outfile lora.gguf --outtype f16 --base-model-id mistralai/Mistral-7B-Instruct-v0.3
+      - uses: actions/upload-artifact@v4
+        with: {name: lora-gguf, path: lora.gguf, retention-days: 7}
+
+  run:
+    needs: adapter
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {task: generate, shards: 14, shard: 0}
+          - {task: generate, shards: 14, shard: 1}
+          - {task: generate, shards: 14, shard: 2}
+          - {task: generate, shards: 14, shard: 3}
+          - {task: generate, shards: 14, shard: 4}
+          - {task: generate, shards: 14, shard: 5}
+          - {task: generate, shards: 14, shard: 6}
+          - {task: generate, shards: 14, shard: 7}
+          - {task: generate, shards: 14, shard: 8}
+          - {task: generate, shards: 14, shard: 9}
+          - {task: generate, shards: 14, shard: 10}
+          - {task: generate, shards: 14, shard: 11}
+          - {task: generate, shards: 14, shard: 12}
+          - {task: generate, shards: 14, shard: 13}
+          - {task: mmlu, shards: 6, shard: 0}
+          - {task: mmlu, shards: 6, shard: 1}
+          - {task: mmlu, shards: 6, shard: 2}
+          - {task: mmlu, shards: 6, shard: 3}
+          - {task: mmlu, shards: 6, shard: 4}
+          - {task: mmlu, shards: 6, shard: 5}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -q numpy pandas datasets huggingface_hub && pip install -q --no-deps -e .
+      - uses: actions/download-artifact@v4
+        with: {name: lora-gguf}
+      - name: Model and llama.cpp
+        run: |
+          curl -sfL -o bin.tar.gz "https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz"
+          mkdir llama && tar -xzf bin.tar.gz -C llama
+          python -c "import os;from huggingface_hub import hf_hub_download as d;d(os.environ['GGUF_REPO'], os.environ['GGUF_FILE'], local_dir='.')"
+      - name: Start server
+        run: |
+          srv=$(find llama -name llama-server | head -1); export LD_LIBRARY_PATH=$(dirname $srv):$LD_LIBRARY_PATH
+          nohup $srv -m $GGUF_FILE --lora lora.gguf --lora-init-without-apply -c 2048 -t 4 --port 8080 > server.log 2>&1 &
+          for i in $(seq 1 150); do curl -sf localhost:8080/health && break; sleep 2; done
+      - name: Run shard
+        run: python -m medeval.run ${{ matrix.task }} --shard ${{ matrix.shard }} --shards ${{ matrix.shards }} --out out/${{ matrix.task }}-${{ matrix.shard }}.jsonl
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: "out-${{ matrix.task }}-${{ matrix.shard }}", path: out/, retention-days: 30}
+
+  report:
+    needs: run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q -e .
+      - uses: actions/download-artifact@v4
+        with: {pattern: "out-*", path: out, merge-multiple: true}
+      - run: ls out && python -m medeval.report --runs out --results results
+      - name: Commit results
+        run: |
+          cp out/*.jsonl results/raw/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898729+github-actions[bot]@users.noreply.github.com"
+          git add -A results
+          git commit -m "Evaluation results from run ${{ github.run_id }}"
+          git push
