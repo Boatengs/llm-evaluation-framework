@@ -37,16 +37,16 @@ jobs:
         run: |
           curl -sfL -o bin.tar.gz "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/llama-$TAG-bin-ubuntu-x64.tar.gz"
           mkdir llama && tar -xzf bin.tar.gz -C llama && find llama -name 'llama-server'
-          git clone -q --depth 1 https://github.com/ggml-org/llama.cpp src
-          ls src/convert_lora_to_gguf.py
+          git clone -q --depth 1 https://github.com/ggml-org/llama.cpp llamacpp
+          ls llamacpp/convert_lora_to_gguf.py
       - name: Convert LoRA adapter
         run: |
           pip install -q torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -q -r src/requirements/requirements-convert_lora_to_gguf.txt || pip install -q transformers safetensors sentencepiece protobuf
-          pip install -q -e src/gguf-py
+          pip install -q -r llamacpp/requirements/requirements-convert_lora_to_gguf.txt || pip install -q transformers safetensors sentencepiece protobuf
+          pip install -q -e llamacpp/gguf-py
           python -c "from huggingface_hub import snapshot_download; print(snapshot_download('samurvivor-07/medical-mistral-lora', local_dir='adapter'))"
           ls -la adapter; cat adapter/adapter_config.json
-          python src/convert_lora_to_gguf.py adapter --outfile lora.gguf --outtype f16 --base-model-id mistralai/Mistral-7B-Instruct-v0.3 2>&1 | tail -5 || true
+          python llamacpp/convert_lora_to_gguf.py adapter --outfile lora.gguf --outtype f16 --base-model-id mistralai/Mistral-7B-Instruct-v0.3 2>&1 | tail -5 || true
           ls -la lora.gguf || echo NO_LORA
       - name: Download base GGUF
         run: |
