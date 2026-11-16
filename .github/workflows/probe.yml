@@ -32,22 +32,12 @@ jobs:
               print("mistral config ERR", type(e).__name__, str(e)[:200])
           PY
       - name: llama.cpp release
+        env:
+          TAG: b12445
         run: |
-          curl -s "https://api.github.com/repos/ggml-org/llama.cpp/releases?per_page=40" > rels.json
-          python - <<'PY' > pick.txt
-          import json
-          bad = ("vulkan", "rocm", "cuda", "sycl", "openvino", "s390", "arm", "aarch64", "hip")
-          for r in json.load(open("rels.json")):
-              for a in r["assets"]:
-                  n = a["name"]
-                  if "ubuntu" in n and "x64" in n and not any(k in n for k in bad):
-                      print(r["tag_name"], a["browser_download_url"]); raise SystemExit
-          PY
-          read tag url < pick.txt; echo "TAG=$tag" >> $GITHUB_ENV; echo "tag $tag url $url"
-          curl -sL -o bin.archive "$url"
-          mkdir llama; (unzip -q bin.archive -d llama 2>/dev/null || tar -xzf bin.archive -C llama)
-          find llama -name 'llama-server' | head
-          mkdir src && curl -sL "https://github.com/ggml-org/llama.cpp/archive/refs/tags/$tag.tar.gz" | tar -xz -C src --strip-components=1
+          curl -sfL -o bin.tar.gz "https://github.com/ggml-org/llama.cpp/releases/download/$TAG/llama-$TAG-bin-ubuntu-x64.tar.gz"
+          mkdir llama && tar -xzf bin.tar.gz -C llama && find llama -name 'llama-server'
+          mkdir src && curl -sfL "https://github.com/ggml-org/llama.cpp/archive/refs/tags/$TAG.tar.gz" | tar -xz -C src --strip-components=1
           ls src/convert_lora_to_gguf.py
       - name: Convert LoRA adapter
         run: |
