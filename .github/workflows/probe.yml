@@ -56,5 +56,6 @@ jobs:
           srv=$(find llama -name llama-server | head -1); chmod +x $srv; export LD_LIBRARY_PATH=$(dirname $srv):$LD_LIBRARY_PATH
           $srv -m $GGUF_FILE --lora lora.gguf --lora-init-without-apply -c 4096 -t 4 --port 8080 > server.log 2>&1 &
           for i in $(seq 1 120); do curl -sf localhost:8080/health && break; sleep 2; done; echo
+          pip install -q -U datasets huggingface_hub
           python probe/probe.py
           tail -5 server.log
