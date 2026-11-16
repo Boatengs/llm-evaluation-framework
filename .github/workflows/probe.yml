@@ -1,0 +1,59 @@
+name: probe
+on:
+  push:
+    branches: [eval-v2]
+    paths: [".github/workflows/probe.yml", "probe/**"]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GGUF_REPO: bartowski/Mistral-7B-Instruct-v0.3-GGUF
+      GGUF_FILE: Mistral-7B-Instruct-v0.3-Q8_0.gguf
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Hub access
+        run: |
+          pip install -q "huggingface_hub>=0.25" datasets
+          python - <<'PY'
+          from huggingface_hub import HfApi, hf_hub_download
+          api = HfApi()
+          for repo in ["samurvivor-07/medical-mistral-lora", "bartowski/Mistral-7B-Instruct-v0.3-GGUF", "mistralai/Mistral-7B-Instruct-v0.3"]:
+              try:
+                  info = api.model_info(repo, files_metadata=True)
+                  print(repo, "gated:", info.gated, [(s.rfilename, s.size) for s in info.siblings if s.rfilename.endswith(('.gguf','.json','.safetensors','.model'))][:12])
+              except Exception as e:
+                  print(repo, "ERR", type(e).__name__, str(e)[:200])
+          try:
+              p = hf_hub_download("mistralai/Mistral-7B-Instruct-v0.3", "config.json"); print("mistral config ok", open(p).read()[:200])
+          except Exception as e:
+              print("mistral config ERR", type(e).__name__, str(e)[:200])
+          PY
+      - name: llama.cpp release
+        run: |
+          tag=$(curl -s https://api.github.com/repos/ggml-org/llama.cpp/releases/latest | python -c "import json,sys;print(json.load(sys.stdin)['tag_name'])")
+          echo "TAG=$tag" >> $GITHUB_ENV; echo tag $tag
+          curl -sL -o bin.zip "https://github.com/ggml-org/llama.cpp/releases/download/$tag/llama-$tag-bin-ubuntu-x64.zip"
+          unzip -q bin.zip -d llama && find llama -name 'llama-server' -o -name 'llama-cli' | head
+          git clone -q --depth 1 --branch $tag https://github.com/ggml-org/llama.cpp src
+      - name: Convert LoRA adapter
+        run: |
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q -r src/requirements/requirements-convert_lora_to_gguf.txt || pip install -q transformers safetensors sentencepiece protobuf
+          pip install -q -e src/gguf-py
+          python -c "from huggingface_hub import snapshot_download; print(snapshot_download('samurvivor-07/medical-mistral-lora', local_dir='adapter'))"
+          ls -la adapter; cat adapter/adapter_config.json
+          python src/convert_lora_to_gguf.py adapter --outfile lora.gguf --outtype f16 --base-model-id mistralai/Mistral-7B-Instruct-v0.3 2>&1 | tail -5 || true
+          ls -la lora.gguf || echo NO_LORA
+      - name: Download base GGUF
+        run: |
+          t=$(date +%s); python -c "import os;from huggingface_hub import hf_hub_download as d;print(d(os.environ['GGUF_REPO'], os.environ['GGUF_FILE'], local_dir='.'))"; echo secs $(( $(date +%s)-t ))
+      - name: Server and speed
+        run: |
+          srv=$(find llama -name llama-server | head -1); chmod +x $srv; export LD_LIBRARY_PATH=$(dirname $srv):$LD_LIBRARY_PATH
+          $srv -m $GGUF_FILE --lora lora.gguf --lora-init-without-apply -c 4096 -t 4 --port 8080 > server.log 2>&1 &
+          for i in $(seq 1 120); do curl -sf localhost:8080/health && break; sleep 2; done; echo
+          python probe/probe.py
+          tail -5 server.log
