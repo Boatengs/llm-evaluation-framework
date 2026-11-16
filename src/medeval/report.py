@@ -83,13 +83,13 @@ def markdown(r: dict) -> str:
     h = r["heldout"]
     L += [f"## Held-out Medical Meadow flashcards ({h['n']} questions)", "",
           "Questions from the 10% split the adapter never trained or selected on, with exact duplicates of "
-          f"training questions removed. Median reference answer: {h['median_reference_words']:.0f} words.", "",
+          f"training questions removed. Median reference answer: {h['median_reference_words']:g} words.", "",
           "| Metric | Base, flashcard prompt | Base, chat prompt | Fine tuned |", "|---|---|---|---|"]
     c = h["conditions"]
     for m, label in METRICS:
         L.append(f"| {label} | {fmt(c['base_flashcard'][m])} | {fmt(c['base_chat'][m])} | {fmt(c['finetuned'][m])} |")
-    L.append(f"| Median answer length, words | {c['base_flashcard']['median_words']:.0f} | "
-             f"{c['base_chat']['median_words']:.0f} | {c['finetuned']['median_words']:.0f} |")
+    L.append(f"| Median answer length, words | {c['base_flashcard']['median_words']:g} | "
+             f"{c['base_chat']['median_words']:g} | {c['finetuned']['median_words']:g} |")
     L.append(f"| Answers cut off at 200 tokens | {fmt(c['base_flashcard']['share_hit_token_limit'], True)} | "
              f"{fmt(c['base_chat']['share_hit_token_limit'], True)} | {fmt(c['finetuned']['share_hit_token_limit'], True)} |")
     L.append("")

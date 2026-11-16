@@ -1,3 +1,4 @@
+> **Version 1 write-up, kept for the record.** Version 2 ([README](README.md), [results](results/RESULTS.md)) tested 300 held-out flashcards and 945 MMLU medical questions. Two claims below do not hold: the 13 of 20 win rate is not statistically significant (sign test p = 0.26), and the fine tune did lose general medical knowledge (MMLU accuracy 65.2% to 61.2%, McNemar p = 0.002).
 
 #  Medical LLM Evaluation — Research Analysis
 
