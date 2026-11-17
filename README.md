@@ -83,7 +83,8 @@ src/medeval/
   report.py    results/summary.json and results/RESULTS.md
 tests/         unit tests for each module
 version 1 files: llm_evaluation_framework.ipynb, eval_results.csv, eval_summary.json,
-                 evaluation_dashboard.html, research_analysis.md, app.py
+                 evaluation_dashboard.html, research_analysis.md
+app.py         the version 2 dashboard served by the Hugging Face Space
 ```
 
 ## Data
@@ -93,4 +94,4 @@ version 1 files: llm_evaluation_framework.ipynb, eval_results.csv, eval_summary.
 
 ## Live demo
 
-The [Hugging Face Space](https://huggingface.co/spaces/samurvivor-07/llm-evaluation-framework) still shows the version 1 dashboard.
+The [Hugging Face Space](https://huggingface.co/spaces/samurvivor-07/llm-evaluation-framework) shows the version 2 results and lets you browse all 300 held-out answers from each condition. It runs `app.py` from this repository, pinned to a commit.
